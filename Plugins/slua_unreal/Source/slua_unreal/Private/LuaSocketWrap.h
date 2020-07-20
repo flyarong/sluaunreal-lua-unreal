@@ -13,7 +13,9 @@
 
 #pragma once
 
-namespace slua {
+#include "lua/lua.hpp"
+
+namespace NS_SLUA {
     namespace LuaSocket {
         void init(lua_State *L);
     }

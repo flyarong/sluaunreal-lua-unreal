@@ -45,6 +45,8 @@ public class slua_profile : ModuleRules
         if (Target.Type == TargetRules.TargetType.Editor)
         {
             PrivateDependencyModuleNames.Add("UnrealEd");
+            PrivateDependencyModuleNames.Add("EditorStyle");
+            PrivateDependencyModuleNames.Add("LevelEditor");
         }
 
 
@@ -55,9 +57,11 @@ public class slua_profile : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "EditorStyle",
                 "UMG",
+                "EditorStyle",
                 "InputCore",
+                "Networking",
+                "Sockets",
 				// ... add private dependencies that you statically link with here ...	
 			}
     );

@@ -19,7 +19,7 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "PropertyUtil.h"
 
-namespace slua {
+namespace NS_SLUA {
 
     class SLUA_UNREAL_API LuaArray : public FGCObject {
     public:
@@ -77,6 +77,7 @@ namespace slua {
         FScriptArray* array;
 		UArrayProperty* prop;
 		UObject* propObj;
+		bool shouldFree;
 
         void clear();
         uint8* getRawPtr(int index) const;
@@ -92,10 +93,12 @@ namespace slua {
         static int gc(lua_State* L);
 
 		struct Enumerator {
-			LuaArray* arr;
-			int32 index;
-
+			LuaArray* arr = nullptr;
+			// hold referrence of LuaArray, avoid gc
+			class LuaVar* holder = nullptr;
+			int32 index = 0;
 			static int gc(lua_State* L);
+			~Enumerator();
 		};
     };
 }

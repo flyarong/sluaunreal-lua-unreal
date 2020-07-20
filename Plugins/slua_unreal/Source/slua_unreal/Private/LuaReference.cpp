@@ -11,10 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 // See the License for the specific language governing permissions and limitations under the License.
 
-#pragma once
 #include "LuaReference.h"
 
-namespace slua {
+namespace NS_SLUA {
 	namespace LuaReference {
 
 		void addRefByStruct(FReferenceCollector& collector, UStruct* us, void* base, bool container) {
@@ -94,7 +93,7 @@ namespace slua {
 			{
 				void* value = container?p->ContainerPtrToValuePtr<void>(base, n):base;
 				UObject* obj = p->GetObjectPropertyValue(value);
-				if (obj)
+				if (obj && obj->IsValidLowLevel())
 				{
 					UObject* newobj = obj;
 					collector.AddReferencedObject(newobj);
@@ -127,7 +126,11 @@ namespace slua {
 		{
 			for (int n = 0; n < p->ArrayDim; ++n)
 			{
+#if (ENGINE_MINOR_VERSION>=23) && (ENGINE_MAJOR_VERSION>=4)
+				FMulticastScriptDelegate* Value = const_cast<FMulticastScriptDelegate*>(p->GetMulticastDelegate(container ? p->ContainerPtrToValuePtr<void>(base, n) : base));
+#else
 				FMulticastScriptDelegate* Value = p->GetPropertyValuePtr(container?p->ContainerPtrToValuePtr<void>(base, n):base);
+#endif
 				addRefByMulticastDelegate(collector, *Value);
 			}
 			return false;

@@ -1,6 +1,21 @@
 
 local Test=import('SluaTestCase');
 local t=Test();
+
+local han = t.OnTestAAA:Add(function(s)
+    print(s)
+    RemoveAAA()
+end)
+
+t:TestLuaCallback(function() print("callback bpvar") end)
+
+function RemoveAAA()
+    print("AAAAAAAAAAAAAAAAA")
+    t.OnTestAAA:Remove(han)
+end
+
+t:TestAAA("abc AAAA")
+
 print(string.format("Brush=%s", tostring(t.Brush)))
 print(string.format("Value=%s", tostring(t.Value)))
 t.Value = 100

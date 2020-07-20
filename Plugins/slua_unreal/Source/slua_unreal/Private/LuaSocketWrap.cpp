@@ -11,12 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 // See the License for the specific language governing permissions and limitations under the License.
 
+#include "LuaSocketWrap.h"
 #include "LuaObject.h"
 #include "LuaState.h"
 #include "luasocket/luasocket.h"
 #include "luasocket/mime.h"
 
-namespace slua {
+namespace NS_SLUA {
 
     namespace LuaSocket {
 

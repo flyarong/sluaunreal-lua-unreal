@@ -15,7 +15,7 @@
 
 #include "LuaVar.h"
 
-namespace slua
+namespace NS_SLUA
 {
 	template<typename T>
 	inline static T resultCast(LuaVar&& Var, typename std::enable_if<!std::is_void<T>::value, int>::type = 0)
@@ -37,7 +37,7 @@ namespace slua
 			return [=](ArgTypes&& ... args) -> ReturnType
 			{
 				LuaVar result = func.call(std::forward<ArgTypes>(args) ...);
-				return resultCast<ReturnType>(std::move(result));
+				return resultCast<ReturnType>(MoveTemp(result));
 			};
 		}
 		else

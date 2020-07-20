@@ -13,22 +13,28 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
 #include "Containers/Ticker.h"
-#include "InputCoreTypes.h"
 #include "ModuleManager.h"
+#include "Commands.h"
 #include "slua_profile_inspector.h"
+#include "LuaMemoryProfile.h"
+
+/** Declares a log category for this module. */
+DECLARE_LOG_CATEGORY_EXTERN(LogSluaProfile, Log, All);
 
 #ifdef ENABLE_PROFILER
-#define PROFILER_WATCHER(x)  Profiler x(__FUNCTION__);
-#define PROFILER_WATCHER_WITH_FUNC_NAME(x, functionName)  Profiler x(functionName);
-#define PROFILER_BEGIN_WATCHER_WITH_FUNC_NAME(functionName)  Profiler::BeginWatch(functionName);
-#define PROFILER_END_WATCHER()  Profiler::EndWatch();
+#define PROFILER_BEGIN_WATCHER_WITH_FUNC_NAME(functionName, nanoseconds)  Profiler::BeginWatch(functionName, nanoseconds);
+#define PROFILER_END_WATCHER(functionName, nanoseconds)  Profiler::EndWatch(nanoseconds);
 #else
-#define PROFILER_WATCHER(x)
-#define PROFILER_WATCHER_WITH_FUNC_NAME(x, functionName)
 #define PROFILER_BEGIN_WATCHER_WITH_FUNC_NAME(functionName)
-#define PROFILER_END_WATCHER()
+#define PROFILER_END_WATCHER(functionName)
 #endif
+
+namespace slua
+{
+	class FProfileServer;
+}
 
 class SLUA_PROFILE_API Fslua_profileModule : public IModuleInterface
 {
@@ -38,23 +44,25 @@ public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
+    
 	void PluginButtonClicked();
 private:
 	// fields
 	FTickerDelegate TickDelegate;
 	FDelegateHandle TickDelegateHandle;
-	TSharedPtr<SProfilerInspector> sluaProfilerInspector;
-	int stateIndex = -1;
+    TSharedPtr<SProfilerInspector> sluaProfilerInspector;
 	bool tabOpened = false;
 	TSharedPtr<class FUICommandList> PluginCommands;
 
 	// functions
 	void OnTabClosed(TSharedRef<SDockTab> tab);
-	void openHook();
+    
 	TSharedRef<class SDockTab> OnSpawnPluginTab(const class FSpawnTabArgs& SpawnTabArgs);
 	bool Tick(float DeltaTime);
 	void ClearCurProfiler();
 	void AddMenuExtension(FMenuBuilder& Builder);
+	
+    void debug_hook_c(NS_SLUA::FProfileMessagePtr Message);
 };
 
 struct SLUA_PROFILE_API FunctionProfileInfo
@@ -73,7 +81,15 @@ struct SLUA_PROFILE_API FunctionProfileInfo
 	TArray<int> mergeIdxArray;
 };
 
+struct SLUA_PROFILE_API MemoryFrame
+{
+	bool bMemoryTick;
+	TArray<NS_SLUA::LuaMemInfo> memoryInfoList;
+	TArray<NS_SLUA::LuaMemInfo> memoryIncrease;
+	TArray<NS_SLUA::LuaMemInfo> memoryDecrease;
+};
 
+#if WITH_EDITOR
 class Flua_profileCommands : public TCommands<Flua_profileCommands>
 {
 public:
@@ -86,24 +102,11 @@ public:
 public:
 	TSharedPtr< FUICommandInfo > OpenPluginWindow;
 };
+#endif
 
 class SLUA_PROFILE_API Profiler
 {
 public:
-	Profiler(FString funcName)
-	{
-		BeginWatch(funcName);
-	}
-
-	~Profiler()
-	{
-		EndWatch();
-	}
-
-public:
-	static void BeginWatch(FString funcName);
-	static void EndWatch();
+	static void BeginWatch(const FString& funcName, double nanoseconds);
+	static void EndWatch(double nanoseconds);
 };
-
-void InitProfilerWatchThread();   // unsupport multi-thread function profile
-

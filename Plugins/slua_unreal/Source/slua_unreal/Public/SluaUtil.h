@@ -14,15 +14,19 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "lua/lua.hpp"
+#include "lua/lstate.h"
 #include <functional>
 #include <cstddef>
 #include <cstring>
+#include "SlateCore.h"
+#include "Engine/EngineTypes.h"
+#include "Engine/World.h"
 
 #ifndef SafeDelete
 #define SafeDelete(ptr) if(ptr) { delete ptr;ptr=nullptr; }
 #endif
 
-namespace slua {
+namespace NS_SLUA {
 
 	template<typename T>
 	struct AutoDeleteArray {
@@ -177,11 +181,26 @@ namespace slua {
 		}
 	};
 
+	template<typename T>
+	struct TypeName<T*, false> {
+		static SimpleString value() {
+			return TypeName<T>::value();
+		}
+	};
+
 #define DefTypeName(T) \
     template<> \
     struct TypeName<T, false> { \
         static SimpleString value() { \
             return SimpleString(#T);\
+        }\
+    };\
+
+#define DefTypeNameWithName(T,TN) \
+    template<> \
+    struct TypeName<T, false> { \
+        static SimpleString value() { \
+            return SimpleString(#TN);\
         }\
     };\
 
@@ -196,7 +215,35 @@ namespace slua {
 	DefTypeName(double);
 	DefTypeName(FString);
 	DefTypeName(bool);
-
+	DefTypeName(lua_State);
+	// add your custom Type-Maped here
+	DefTypeName(FHitResult);
+	DefTypeName(FActorSpawnParameters);
+	DefTypeName(FSlateFontInfo);
+	DefTypeName(FSlateBrush);
+	DefTypeName(FMargin);
+	DefTypeName(FGeometry);
+	DefTypeName(FSlateColor);
+	DefTypeName(FRotator);
+	DefTypeName(FTransform);
+	DefTypeName(FLinearColor);
+	DefTypeName(FColor);
+	DefTypeName(FVector);
+	DefTypeName(FVector2D);
+	DefTypeName(FRandomStream);
+	DefTypeName(FGuid);
+	DefTypeName(FBox2D);
+	DefTypeName(FFloatRangeBound);
+	DefTypeName(FFloatRange);
+	DefTypeName(FInt32RangeBound);
+	DefTypeName(FInt32Range);
+	DefTypeName(FFloatInterval);
+	DefTypeName(FInt32Interval);
+	DefTypeName(FPrimaryAssetType);
+	DefTypeName(FPrimaryAssetId);
+	DefTypeName(FActorComponentTickFunction);
+	DefTypeName(FDateTime);
+	
 	template<typename T,ESPMode mode>
 	struct TypeName<TSharedPtr<T, mode>, false> {
 		static SimpleString value() {
@@ -265,4 +312,33 @@ namespace slua {
 		enum { value = IsUObject<T>::value };
 	};
 	
+	// lua long string 
+	// you can call push(L,{str,len}) to push LuaLString
+	struct LuaLString {
+		const char* buf;
+		size_t len;
+	};
+
+	// SFINAE test class has a specified member function
+	template <typename T>
+	class Has_LUA_typename
+	{
+	private:
+		typedef char WithType;
+		typedef int WithoutType;
+
+		template <typename C> 
+		static WithType test(decltype(&C::LUA_typename));
+		template <typename C> 
+		static WithoutType test(...);
+
+	public:
+		enum { value = sizeof(test<T>(0)) == sizeof(WithType) };
+	};
+
+	FString SLUA_UNREAL_API getUObjName(UObject* obj);
+	bool SLUA_UNREAL_API isUnrealStruct(const char* tn, UScriptStruct** out);
+
+
+	int64_t SLUA_UNREAL_API getTime();
 }

@@ -44,12 +44,15 @@ ULuaBlueprintLibrary::ULuaBlueprintLibrary(const FObjectInitializer& ObjectIniti
 			LOCTEXT("GetVarTypeErrorWarning", "BpVar is not speicified type")
 		)
 	);
+
 }
 
-FLuaBPVar ULuaBlueprintLibrary::CallToLuaWithArgs(FString funcname,const TArray<FLuaBPVar>& args,FString StateName) {
-    using namespace slua;
+FLuaBPVar ULuaBlueprintLibrary::CallToLuaWithArgs(UObject* WorldContextObject, FString funcname,const TArray<FLuaBPVar>& args,FString StateName) {
+    using namespace NS_SLUA;
     // get main state
-    auto ls = LuaState::get();
+	auto actor = Cast<AActor>(WorldContextObject);
+	ensure(actor);
+    auto ls = LuaState::get(actor->GetGameInstance());
     if(StateName.Len()!=0) ls = LuaState::get(StateName);
     if(!ls) return FLuaBPVar();
     LuaVar f = ls->get(TCHAR_TO_UTF8(*funcname));
@@ -64,10 +67,12 @@ FLuaBPVar ULuaBlueprintLibrary::CallToLuaWithArgs(FString funcname,const TArray<
     return f.callWithNArg(args.Num());
 }
 
-FLuaBPVar ULuaBlueprintLibrary::CallToLua(FString funcname,FString StateName) {
-    using namespace slua;
+FLuaBPVar ULuaBlueprintLibrary::CallToLua(UObject* WorldContextObject, FString funcname,FString StateName) {
+    using namespace NS_SLUA;
     // get main state
-    auto ls = LuaState::get();
+	auto actor = Cast<AActor>(WorldContextObject);
+	ensure(actor);
+	auto ls = LuaState::get(actor->GetGameInstance());
     if(StateName.Len()!=0) ls = LuaState::get(StateName);
     if(!ls) return FLuaBPVar();
     LuaVar f = ls->get(TCHAR_TO_UTF8(*funcname));
@@ -87,7 +92,7 @@ FLuaBPVar ULuaBlueprintLibrary::CreateVarFromInt(int i) {
 
 FLuaBPVar ULuaBlueprintLibrary::CreateVarFromString(FString s) {
     FLuaBPVar v;
-    v.value.set(TCHAR_TO_UTF8(*s));
+    v.value.set(TCHAR_TO_UTF8(*s),0);
     return v;
 }
 
@@ -103,18 +108,29 @@ FLuaBPVar ULuaBlueprintLibrary::CreateVarFromBool(bool b) {
     return v;
 }
 
-FLuaBPVar ULuaBlueprintLibrary::CreateVarFromObject(UObject* o) {
-    using namespace slua;
-    auto ls = LuaState::get();
+FLuaBPVar ULuaBlueprintLibrary::CreateVarFromObject(UObject* WorldContextObject, UObject* o) {
+    using namespace NS_SLUA;
+	auto actor = Cast<AActor>(WorldContextObject);
+	ensure(actor);
+	auto ls = LuaState::get(actor->GetGameInstance());
     if(!ls) return FLuaBPVar();
-    LuaObject::push(*ls,o);
-    LuaVar ret(*ls,-1);
-    lua_pop(*ls,1);
+    LuaObject::push(ls->getLuaState(),o);
+    LuaVar ret(ls->getLuaState(),-1);
+    lua_pop(ls->getLuaState(),1);
     return FLuaBPVar(ret);
 }
 
+int FLuaBPVar::checkValue(NS_SLUA::lua_State* L, UStructProperty* p, uint8* params, int i)
+{
+	FLuaBPVar ret;
+	ret.value.set(L, i);
+	p->CopyCompleteValue(params, &ret);
+	return 0;
+}
+
+
 namespace {
-    using namespace slua;
+    using namespace NS_SLUA;
 
     bool getValue(const LuaVar& lv,int index,int& value) {
         if(index==1 && lv.count()>=index && lv.isInt()) {
@@ -183,7 +199,7 @@ namespace {
 
     template<class T>
     T getValueFromVar(const FLuaBPVar& Value,int Index) {
-        using namespace slua;
+        using namespace NS_SLUA;
         const LuaVar& lv = Value.value;
         if(Index<=lv.count()) {
             T v;

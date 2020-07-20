@@ -26,15 +26,16 @@ static uint8* ReadFile(IPlatformFile& PlatformFile, FString path, uint32& len) {
 	return nullptr;
 }
 
-UMyGameInstance::UMyGameInstance() :state("main") {
+UMyGameInstance::UMyGameInstance() :state("main",this) {
 
 }
 
 void UMyGameInstance::Init()
 {
+	state.onInitEvent.AddUObject(this, &UMyGameInstance::LuaStateInitCallback);
 	state.init();
 
-	state.setLoadFileDelegate([](const char* fn, uint32& len, FString& filepath)->uint8* {
+	state.setLoadFileDelegate([](const char* fn, FString& filepath)->TArray<uint8> {
 
 		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 		FString path = FPaths::ProjectContentDir();
@@ -42,22 +43,40 @@ void UMyGameInstance::Init()
 		path /= "Lua";
 		path /= filename.Replace(TEXT("."), TEXT("/"));
 
+		TArray<uint8> Content;
 		TArray<FString> luaExts = { UTF8_TO_TCHAR(".lua"), UTF8_TO_TCHAR(".luac") };
 		for (auto& it : luaExts) {
 			auto fullPath = path + *it;
-			auto buf = ReadFile(PlatformFile, fullPath, len);
-			if (buf) {
-				fullPath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*fullPath);
+
+			FFileHelper::LoadFileToArray(Content, *fullPath);
+			if (Content.Num() > 0) {
 				filepath = fullPath;
-				return buf;
+				return MoveTemp(Content);
 			}
 		}
 
-		return nullptr;
+		return MoveTemp(Content);
 	});
 }
 
 void UMyGameInstance::Shutdown()
 {
 	state.close();
+}
+
+static int32 PrintLog(NS_SLUA::lua_State *L)
+{
+	FString str;
+	size_t len;
+	const char* s = luaL_tolstring(L, 1, &len);
+	if (s) str += UTF8_TO_TCHAR(s);
+	NS_SLUA::Log::Log("PrintLog %s", TCHAR_TO_UTF8(*str));
+	return 0;
+}
+
+void UMyGameInstance::LuaStateInitCallback()
+{
+	NS_SLUA::lua_State *L = state.getLuaState();
+	lua_pushcfunction(L, PrintLog);
+	lua_setglobal(L, "PrintLog");
 }

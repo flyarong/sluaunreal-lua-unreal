@@ -1,6 +1,8 @@
 
 
 local actor={}
+
+local EPropertyClass = import"EPropertyClass"
 -- override event from blueprint
 function actor:ReceiveBeginPlay()
     self.bCanEverTick = true
@@ -23,13 +25,23 @@ function actor:ReceiveBeginPlay()
         self.rot[n]=math.random(-100,100)
         actor.Name = 'ActorCreateFromLua_'..tostring(n)
     end
-    self:Super()
+    self.Super:ReceiveBeginPlay()
+
+    -- test an issue
+    -- callLastMapActorMethod()
+end
+
+function callLastMapActorMethod()
+    for k,v in pairs(gactor.objs) do
+        print(k,v)
+    end
 end
 
 -- override event from blueprint
 function actor:ReceiveEndPlay(reason)
     print("actor:ReceiveEndPlay")
-    self:Super()
+    self.Super:ReceiveEndPlay(reason)
+
 end
 
 local HitResult = import('HitResult');
@@ -45,7 +57,7 @@ function actor:Tick(dt)
         local offset = FVector(0,math.cos(tt)*rot,0)
         local ok,h=actor:K2_SetActorLocation(p+v+offset,true,h,true)
     end
-    self:Super()
+    self.Super:Tick(dt)
 end
 
 return actor

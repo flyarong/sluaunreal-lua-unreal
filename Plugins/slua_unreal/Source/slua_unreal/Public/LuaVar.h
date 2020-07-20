@@ -26,7 +26,7 @@
 #define strdup _strdup
 #endif
 
-namespace slua {
+namespace NS_SLUA {
 
     class SLUA_UNREAL_API LuaVar {
     public:
@@ -38,7 +38,8 @@ namespace slua {
         LuaVar(int v);
         LuaVar(size_t v);
         LuaVar(lua_Number v);
-        LuaVar(const char* v);
+		LuaVar(const char* v);
+		LuaVar(const char* v, size_t len);
         LuaVar(bool v);
 
         LuaVar(lua_State* L,int p);
@@ -48,7 +49,7 @@ namespace slua {
             clone(other);
         }
         LuaVar(LuaVar&& other):LuaVar() {
-            move(std::move(other));
+            move(MoveTemp(other));
         }
 
         void operator=(const LuaVar& other) {
@@ -57,7 +58,7 @@ namespace slua {
         }
         void operator=(LuaVar&& other) {
             free();
-            move(std::move(other));
+            move(MoveTemp(other));
         }
 
         virtual ~LuaVar();
@@ -66,7 +67,8 @@ namespace slua {
         void set(lua_Integer v);
         void set(int v);
         void set(lua_Number v);
-        void set(const char* v);
+		void set(const char* v, size_t len);
+		void set(const LuaLString& lstr);
         void set(bool b);
 		void free();
 
@@ -91,7 +93,8 @@ namespace slua {
         int64 asInt64() const;
         float asFloat() const;
         double asDouble() const;
-        const char* asString() const;
+        const char* asString(size_t* outlen=nullptr) const;
+		LuaLString asLString() const;
         bool asBool() const;
         void* asLightUD() const;
         template<typename T>
@@ -117,7 +120,7 @@ namespace slua {
             push(L);
             R r = ArgOperatorOpt::readArg<typename remove_cr<R>::type>(L,-1);
             lua_pop(L,1);
-            return std::move(r);
+            return MoveTemp(r);
         }
 
 
@@ -212,17 +215,31 @@ namespace slua {
             return ret.castTo<RET>();
         }
 
+		template<class ...ARGS>
+		LuaVar callField(const char* field, ARGS&& ...args) const {
+			if (!isTable()) {
+				Log::Error("LuaVar is not a table, can't call field");
+				return LuaVar();
+			}
+			if (!isValid()) {
+				Log::Error("State of lua function is invalid");
+				return LuaVar();
+			}
+			LuaVar ret = getFromTable<LuaVar>(field);
+			return ret.call(std::forward<ARGS>(args)...);
+		}
+
         // call function with pre-pushed n args
         inline LuaVar callWithNArg(int n) {
-            int nret = docall(n);
             auto L = getState();
+            int nret = docall(n);
             auto ret = LuaVar::wrapReturn(L,nret);
             lua_pop(L,nret);
             return ret;
         }
 
         bool toProperty(UProperty* p,uint8* ptr);
-        bool callByUFunction(UFunction* ufunc,uint8* parms,LuaVar* pSelf = nullptr);
+        bool callByUFunction(UFunction* ufunc,uint8* parms,LuaVar* pSelf = nullptr,FOutParmRec* OutParms = nullptr);
 
 		// get associate state
 		lua_State* getState() const;
@@ -253,14 +270,21 @@ namespace slua {
         };
 
         struct RefStr : public Ref {
-            RefStr(const char* s)
-                :Ref()
-                ,str(strdup(s))
-            {}
+			RefStr(const char* s, size_t len)
+				:Ref()
+            {
+				if (len == 0) len = strlen(s);
+				// alloc extra space for '\0'
+				buf = (char*) FMemory::Malloc(len+1);
+				FMemory::Memcpy(buf, s, len);
+				buf[len] = 0;
+				length = len;
+			}
             virtual ~RefStr() {
-                ::free(str);
+                FMemory::Free(buf);
             }
-            char* str;
+            char* buf;
+			size_t length;
         };
 
         struct RefRef: public Ref {

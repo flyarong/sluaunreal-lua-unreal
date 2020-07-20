@@ -33,14 +33,18 @@
 #endif
 #include "LuaMemoryProfile.h"
 #include "Runtime/Launch/Resources/Version.h"
+#include <chrono>
 
-namespace slua {
+namespace NS_SLUA {
 
     void SluaUtil::openLib(lua_State* L) {
         lua_newtable(L);
         RegMetaMethod(L, loadUI);
         RegMetaMethod(L, createDelegate);
 		RegMetaMethod(L, loadClass);
+		RegMetaMethod(L, setTickFunction);
+		RegMetaMethod(L, getMicroseconds);
+		RegMetaMethod(L, getMiliseconds);
 		RegMetaMethod(L, dumpUObjects);
 		RegMetaMethod(L, loadObject);
 		RegMetaMethod(L, threadGC);
@@ -57,9 +61,6 @@ namespace slua {
 
     template<typename T>
     UClass* loadClassT(const char* cls) {
-        TArray<FStringFormatArg> Args;
-        Args.Add(UTF8_TO_TCHAR(cls));
-
 		FString path(UTF8_TO_TCHAR(cls));
 		int32 index;
 		if (!path.FindChar(TCHAR('\''),index)) {
@@ -114,7 +115,7 @@ namespace slua {
         if(uclass==nullptr) luaL_error(L,"Can't find class named %s",cls);
         
 		UUserWidget* widget = nullptr;
-		// obj can be 5 type
+		// obj can be 5 types
 		if (obj) {
 			if (obj->IsA<UWorld>())
 				widget = CreateWidget<UUserWidget>(Cast<UWorld>(obj), uclass);
@@ -158,6 +159,30 @@ namespace slua {
         obj->bindFunction(L,1);
         return LuaObject::push(L,obj);
     }
+
+	int SluaUtil::setTickFunction(lua_State* L)
+	{
+		LuaVar func(L, 1, LuaVar::LV_FUNCTION);
+
+		LuaState* luaState = LuaState::get(L);
+		luaState->setTickFunction(func);
+		return 0;
+	}
+
+	int SluaUtil::getMicroseconds(lua_State* L)
+	{
+		int64_t nanoSeconds = std::chrono::high_resolution_clock::now().time_since_epoch().count() / 1000;
+		lua_pushnumber(L, nanoSeconds);
+		return 1;
+	}
+
+	int SluaUtil::getMiliseconds(lua_State* L)
+	{
+		int64_t nanoSeconds = std::chrono::high_resolution_clock::now().time_since_epoch().count() / 1000000;
+		lua_pushnumber(L, nanoSeconds);
+		return 1;
+	}
+
 	int SluaUtil::dumpUObjects(lua_State * L)
 	{
 		auto state = LuaState::get(L);
@@ -175,15 +200,19 @@ namespace slua {
 	{
 		luaL_checktype(L, 1, LUA_TUSERDATA);
 		GenericUserData *gud = (GenericUserData*)lua_touserdata(L, 1);
-		bool isValid = !(gud->flag & UD_HADFREE);
-		if(!isValid)
-			return LuaObject::push(L, isValid);
+		bool bIsValid = !(gud->flag & UD_HADFREE);
+		if(!bIsValid)
+			return LuaObject::push(L, bIsValid);
 		// if this ud is boxed UObject
 		if (gud->flag & UD_UOBJECT) {
-			UObject* obj = LuaObject::checkUD<UObject>(L, 1);
-			isValid = IsValid(obj);
+			UObject* obj = LuaObject::checkUD<UObject>(L, 1, false);
+			bIsValid = LuaObject::isUObjectValid(obj);
 		}
-		return LuaObject::push(L, isValid);
+		else if (gud->flag&UD_WEAKUPTR) {
+			UserData<WeakUObjectUD*>* wud = (UserData<WeakUObjectUD*>*)gud;
+			bIsValid = wud->ud->isValid();
+		}
+		return LuaObject::push(L, bIsValid);
 	}
 
 #if WITH_EDITOR
