@@ -13,7 +13,7 @@
 
 #include "slua_profile.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
-#include "FileManager.h"
+#include "HAL/FileManager.h"
 #include "Engine/GameEngine.h"
 #include "Containers/Ticker.h"
 #include "LuaState.h"
@@ -186,9 +186,15 @@ void Profiler::EndWatch(double nanoseconds)
 		return;
 	}
 
+	int32 lastCoroutineLayer = -1;
+	if (coroutineLayers.Num())
+	{
+		lastCoroutineLayer = coroutineLayers[coroutineLayers.Num() - 1];
+	}
+
 	// find the end watch function node
-	size_t idx = 0;
-	for (idx = curProfiler.Num(); idx > 0; idx--)
+	int32 idx = 0;
+	for (idx = curProfiler.Num(); idx > 0 && idx > lastCoroutineLayer; idx--)
 	{
 		TSharedPtr<FunctionProfileInfo> &funcInfo = curProfiler[idx - 1];
 		if (funcInfo->endTime == -1)
@@ -237,11 +243,7 @@ void Profiler::EndWatch(double nanoseconds)
 		curProfiler.Add(otherFuncInfo);
 	}
 	currentLayer--;
-	if (coroutineLayers.Num())
-	{
-		int32 lastCoroutineLayer = coroutineLayers[coroutineLayers.Num() - 1];
-		currentLayer = FMath::Max(lastCoroutineLayer, currentLayer);
-	}
+	currentLayer = FMath::Max(lastCoroutineLayer, currentLayer);
 
 	if (currentLayer == 0)
 	{

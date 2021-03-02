@@ -11,11 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 // See the License for the specific language governing permissions and limitations under the License.
 
-#include "SlateColorBrush.h"
+#include "Brushes/SlateColorBrush.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Images/SImage.h"
-#include "Public/Brushes/SlateDynamicImageBrush.h"
-#include "Public/Brushes/SlateImageBrush.h"
+#include "Brushes/SlateDynamicImageBrush.h"
+#include "Brushes/SlateImageBrush.h"
 #include "GenericPlatform/GenericPlatformMath.h"
 #include "UObject/UObjectGlobals.h"
 #include "Templates/SharedPointer.h"
@@ -30,7 +30,7 @@
 #include "Log.h"
 #include "slua_profile.h"
 #include "slua_profile_inspector.h"
-#include "Stats2.h"
+#include "Stats/Stats2.h"
 
 static const FName slua_profileTabNameInspector("slua_profile");
 
@@ -129,7 +129,6 @@ void SProfilerInspector::RestartMemoryStatistis()
 	tempLuaMemNodeChartList.Empty();
 	shownFileInfo.Empty();
 	shownParentFileName.Empty();
-	lastLuaMemNode.Reset();
 	luaTotalMemSize = 0.0f;
 	lastLuaTotalMemSize = 0.0f;
 	maxLuaMemory = 0.0f;
@@ -979,7 +978,8 @@ TSharedRef<ITableRow> SProfilerInspector::OnGenerateRowForList(TSharedPtr<Functi
 	return
 	SNew(STableRow< TSharedPtr<FString> >, OwnerTable)
 	.Padding(2.0f).Visibility_Lambda([=]() {
-		if (Item->functionName.IsEmpty() || Item->beMerged == true || shownProfiler[Item->globalIdx]->beMerged == true)
+		if (Item->functionName.IsEmpty() || Item->beMerged == true || 
+				(shownProfiler.Num() > Item->globalIdx && shownProfiler[Item->globalIdx]->beMerged == true))
 			return EVisibility::Hidden;
 		else
 			return EVisibility::Visible;
@@ -1272,6 +1272,7 @@ void SProfilerInspector::CollectMemoryNode(TMap<int64, NS_SLUA::LuaMemInfo>& mem
 	if (memoryFrame->bMemoryTick)
 	{
 		memoryInfoMap.Empty();
+		lastLuaMemNode.Reset();
 		RestartMemoryStatistis();
 		
 		for (auto &memoInfo : memoryFrame->memoryInfoList)

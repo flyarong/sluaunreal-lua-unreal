@@ -13,9 +13,9 @@
 
 
 #include "LuaBase.h"
-#include "Script.h"
+#include "UObject/Script.h"
 #include "LuaState.h"
-#include "StructOnScope.h"
+#include "UObject/StructOnScope.h"
 #include "LuaUserWidget.h"
 #include "LuaActor.h"
 
@@ -44,7 +44,7 @@ namespace NS_SLUA {
 		NS_SLUA::LuaVar lfunc = luaSelfTable.getFromTable<NS_SLUA::LuaVar>((const char*)TCHAR_TO_UTF8(*func->GetName()), true);
 		if (!lfunc.isValid()) return false;
 
-		return lfunc.callByUFunction(func, (uint8*)params, &luaSelfTable);
+		return lfunc.callByUFunction(func, (uint8*)params, nullptr, nullptr, &luaSelfTable);
 	}
 
 	// Called every frame
@@ -139,6 +139,7 @@ namespace NS_SLUA {
 
 	static int setParent(NS_SLUA::lua_State* L) {
 		// set field to obj, may raise an error
+		ensure(lua_type(L, 1) == LUA_TUSERDATA);
 		lua_settable(L, 1);
 		return 0;
 	}
@@ -151,9 +152,10 @@ namespace NS_SLUA {
 		if (!ud)
 			luaL_error(L, "expect LuaBase table at arg 1");
 		lua_pop(L, 1);
-		LuaObject::push(L, (UObject*)ud, false);
+		LuaObject::push(L, (UObject*)ud, true);
 
 		lua_pushcfunction(L, setParent);
+		ensure(lua_type(L, -2) == LUA_TUSERDATA);
 		// push cpp inst
 		lua_pushvalue(L, -2);
 		// push key
@@ -246,7 +248,7 @@ namespace NS_SLUA {
 		LuaVar& luaSelfTable = lb->luaSelfTable;
 		NS_SLUA::LuaVar lfunc = luaSelfTable.getFromTable<NS_SLUA::LuaVar>(func->GetName(), true);
 		if (lfunc.isValid()) {
-			lfunc.callByUFunction(func, (uint8*)params, &luaSelfTable, Stack.OutParms);
+			lfunc.callByUFunction(func, (uint8*)params, Stack.OutParms, nullptr, &luaSelfTable);
 			*(bool*)RESULT_PARAM = true;
 		}
 		else {

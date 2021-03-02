@@ -15,8 +15,8 @@
 
 #include "CoreMinimal.h"
 #include "Containers/Ticker.h"
-#include "ModuleManager.h"
-#include "Commands.h"
+#include "Modules/ModuleManager.h"
+#include "Framework/Commands/Commands.h"
 #include "slua_profile_inspector.h"
 #include "LuaMemoryProfile.h"
 
@@ -31,7 +31,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogSluaProfile, Log, All);
 #define PROFILER_END_WATCHER(functionName)
 #endif
 
-namespace slua
+namespace NS_SLUA
 {
 	class FProfileServer;
 }
