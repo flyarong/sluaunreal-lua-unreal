@@ -21,7 +21,11 @@ public class slua_unreal : ModuleRules
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
         // enable exception
         bEnableExceptions = true;
+#if UE_5_2_OR_LATER
+        IWYUSupport = IWYUSupport.None;
+#else
         bEnforceIWYU = false;
+#endif
         bEnableUndefinedIdentifierWarnings = false;
 
         var externalSource = Path.Combine(ModuleDirectory, "../../External");
@@ -31,8 +35,8 @@ public class slua_unreal : ModuleRules
             new string[] {
                 externalSource,
                 Path.Combine(externalSource, "lua"),
-				// ... add public include paths required here ...
-			}
+                // ... add public include paths required here ...
+            }
             );
 
         if (Target.Platform == UnrealTargetPlatform.IOS)
@@ -42,8 +46,8 @@ public class slua_unreal : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Android)
         {
 #if UE_4_24_OR_LATER
-            PublicAdditionalLibraries.Add(Path.Combine(externalLib, "Android/armeabi-arm64/liblua.a"));
             PublicAdditionalLibraries.Add(Path.Combine(externalLib, "Android/armeabi-v7a/liblua.a"));
+            PublicAdditionalLibraries.Add(Path.Combine(externalLib, "Android/armeabi-arm64/liblua.a"));
             PublicAdditionalLibraries.Add(Path.Combine(externalLib, "Android/x86/liblua.a"));
 #else
             PublicLibraryPaths.Add(Path.Combine(externalLib, "Android/armeabi-arm64"));
@@ -52,10 +56,12 @@ public class slua_unreal : ModuleRules
             PublicAdditionalLibraries.Add("lua");
 #endif
         }
+#if UE_5_00_OR_LATER
         else if (Target.Platform == UnrealTargetPlatform.Win32 )
         {
             PublicAdditionalLibraries.Add(Path.Combine(externalLib, "Win32/lua.lib"));
         }
+#endif
         else if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             PublicAdditionalLibraries.Add(Path.Combine(externalLib, "Win64/lua.lib"));
@@ -69,13 +75,12 @@ public class slua_unreal : ModuleRules
             PublicAdditionalLibraries.Add(Path.Combine(externalLib, "Linux/liblua.a"));
         }
 
-    PublicDependencyModuleNames.AddRange(
+        PublicDependencyModuleNames.AddRange(
             new string[]
             {
                 "Core",
-				"UMG",
-				// ... add other public dependencies that you statically link with here ...
-			}
+                // ... add other public dependencies that you statically link with here ...
+            }
             );
 
         if (Target.Type == TargetRules.TargetType.Editor)
@@ -92,22 +97,18 @@ public class slua_unreal : ModuleRules
                 "Slate",
                 "SlateCore",
                 "UMG",
-				// ... add private dependencies that you statically link with here ...	
-			}
+                "InputCore",
+                "NetCore",
+                // ... add private dependencies that you statically link with here ...
+            }
             );
 
 #if UE_4_21_OR_LATER
         PublicDefinitions.Add("ENABLE_PROFILER");
+        PublicDefinitions.Add("NS_SLUA=slua");
 #else
         Definitions.Add("ENABLE_PROFILER");
+        Definitions.Add("NS_SLUA=slua");
 #endif
-
-
-        DynamicallyLoadedModuleNames.AddRange(
-            new string[]
-            {
-				// ... add any modules that your module loads dynamically here ...
-			}
-            );
     }
 }

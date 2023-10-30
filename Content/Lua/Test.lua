@@ -1,6 +1,9 @@
 -- open profile
 require 'TestProfile'
 
+--- step gc 1ms in one frame, limit of 1000 times. Just do one gc cycle in 60 seconds.
+slua.setGCParam(0.001, 1000, 60)
+
 -- some.field come from c++
 some.field.y = 103
 EPropertyClass = import"EPropertyClass"
@@ -24,6 +27,9 @@ function begin(uworld,uactor)
     for k,v in pairs(e) do
         print("eeee",k,v)
     end
+	
+	local copy = v:clone()
+	print("copy of v: ", copy.X, copy.Y, copy.Z)
   
     assert(TestEnum.TE_COUNT==2)
     assert(TestEnum2.COUNT==2)
@@ -34,7 +40,6 @@ function begin(uworld,uactor)
     assert(some.field.x==101)
     assert(some.field.y==103)
     assert(some.field.z==104)
-    slua.threadGC("on")
 
     testcase()
 end
@@ -44,6 +49,7 @@ function testcase()
     require 'TestUI'
     require 'TestCase'
     require 'TestStruct'
+    require 'TestInterface'
     require 'TestCppBinding'
     TestBp=require 'TestBlueprint'
     TestBp:test(gworld,gactor)

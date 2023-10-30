@@ -21,7 +21,12 @@ public class slua_profile : ModuleRules
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
         // enable exception
         bEnableExceptions = true;
+
+#if UE_5_2_OR_LATER
+        IWYUSupport = IWYUSupport.None;
+#else
         bEnforceIWYU = false;
+#endif
         bEnableUndefinedIdentifierWarnings = false;
 
         PrivateDependencyModuleNames.AddRange(new string[] { "slua_unreal" });
@@ -42,13 +47,12 @@ public class slua_profile : ModuleRules
 			}
             );
 
-        if (Target.Type == TargetRules.TargetType.Editor)
+        if (Target.Type == TargetType.Editor)
         {
             PrivateDependencyModuleNames.Add("UnrealEd");
             PrivateDependencyModuleNames.Add("EditorStyle");
             PrivateDependencyModuleNames.Add("LevelEditor");
         }
-
 
         PrivateDependencyModuleNames.AddRange(
             new string[]
@@ -58,7 +62,6 @@ public class slua_profile : ModuleRules
                 "Slate",
                 "SlateCore",
                 "UMG",
-                "EditorStyle",
                 "InputCore",
                 "Networking",
                 "Sockets",

@@ -58,9 +58,13 @@ local function test()
 	assert(t.maps:Num()==0)
 end
 
-TestMap={}
-function TestMap.update()
+local TestMap={}
+function TestMap:ReceiveBeginPlay()
     test()
 end
 
-return TestMap
+function TestMap:update()
+	
+end
+
+return Class(ni, nil, TestMap)
